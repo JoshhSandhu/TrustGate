@@ -1,0 +1,21 @@
+{
+  "name": "refusal-agent",
+  "version": "0.1.0",
+  "description": "Refusal-first cross-chain agent",
+  "main": "index.ts",
+  "scripts": {
+    "start": "ts-node index.ts",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.87.0",
+    "@project-serum/anchor": "^0.29.0",
+    "@coral-xyz/anchor": "^0.29.0",
+    "bs58": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0"
+  }
+}
