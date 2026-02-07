@@ -1,34 +1,50 @@
-# Refusal-First Cross-Chain Agent
+# TrustGate
 
-A Solana-based AI agent that is provably constrained by on-chain policy. It refuses unsafe actions, executes only when conditions are satisfied, and logs every decision on-chain for auditability.
+**Provably Constrained Cross-Chain AI Agents**
+
+TrustGate is a Solana-based framework that makes AI agents demonstrably safe. Every agent is bound by on-chain policy, refuses unsafe actions, and logs every decision for auditability.
 
 ## The Problem
 
-Most AI agents are reckless. They'll spend any amount, on any chain, without oversight. There's no proof of what they WON'T do.
+AI agents managing money are terrifying because they have no proven constraints. Most agents claim they're safe. TrustGate agents **prove** it—by showing exactly what they refused to do.
 
 ## The Solution
 
-This agent is different. Before any action, it checks:
+Before any action, TrustGate agents validate against 4 immutable rules:
+
 1. **Expiry** - Is the policy still valid?
-2. **Chain** - Is the target chain allowed?
-3. **Confidence** - Does the opportunity meet the confidence threshold?
-4. **Spend** - Is the amount within the budget?
+2. **Chain** - Is the target chain authorized?
+3. **Confidence** - Does the opportunity meet the threshold?
+4. **Spend** - Is the amount within budget?
 
-If ANY rule fails, the agent **REFUSES** and logs the refusal on-chain.
+If ANY rule fails → **REFUSE** and log on-chain  
+Only when ALL pass → **EXECUTE** with full transparency
 
-Only when ALL rules pass does the agent execute.
+## Live Demo
 
-## Demo Scenarios
+### Scenario A: Excessive Risk → REFUSED
+```
+Market: "Will ETH hit $5000 by March 2026?"
+Confidence: 85% ✓
+Required: $75 USDC
+Policy Limit: $50 USDC ✗
 
-### Market A: ETH to $5k
-- Confidence: 85% (PASS)
-- Required: $75 USDC
-- **Result: REFUSED** (exceeds $50 limit)
+RESULT: ❌ REFUSED - max_spend_exceeded
+Log: 0xabc... (view on Solana Explorer)
+```
 
-### Market B: BTC to $100k
-- Confidence: 80% (PASS)
-- Required: $40 USDC
-- **Result: EXECUTED** (all rules pass)
+### Scenario B: Within Bounds → EXECUTED
+```
+Market: "Will BTC hit $100k by April 2026?"
+Confidence: 80% ✓
+Required: $40 USDC ✓
+Policy Limit: $50 USDC ✓
+
+RESULT: ✅ APPROVED
+CCTP Bridge: 0xdef... → 0xghi...
+Bet Placed: 0xjkl...
+Log: 0xmno... (view on Solana Explorer)
+```
 
 ## Architecture
 
@@ -38,56 +54,85 @@ Only when ALL rules pass does the agent execute.
 │  ┌─────────┐  ┌──────────┐  ┌──────────┐   │
 │  │ Policy  │  │ Refusal  │  │ Execution│   │
 │  │ Account │  │   Log    │  │   Log    │   │
-│  └─────────┘  └──────────┘  └──────────┘   │
-└─────────────────────────────────────────────┘
-                    ▲
-                    │
-┌─────────────────────────────────────────────┐
-│              Agent (TypeScript)             │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │  Policy  │→ │ Decision │→ │  CCTP    │  │
-│  │  Reader  │  │  Engine  │  │  Bridge  │  │
-│  └──────────┘  └──────────┘  └──────────┘  │
+│  └────┬────┘  └────┬─────┘  └────┬─────┘   │
+│       │            │             │          │
+│       └────────────┴─────────────┘          │
+│                    │                        │
+│              TrustGate Agent               │
 └─────────────────────────────────────────────┘
 ```
 
 ## Project Structure
 
 ```
-refusal-agent/
+TrustGate/
 ├── programs/policy-agent/     # Solana program (Rust/Anchor)
 │   ├── Cargo.toml
-│   └── src/lib.rs
+│   └── src/
+│       └── lib.rs            # Policy, RefusalLog, ExecutionLog
 ├── agent/                     # Agent logic (TypeScript)
-│   ├── index.ts              # Main loop
-│   ├── policy.ts             # Policy reader
-│   ├── decision.ts           # Decision engine
-│   ├── market.ts             # Mock market data
-│   └── cctp.ts               # CCTP bridge
+│   ├── index.ts              # Main execution loop
+│   ├── policy.ts             # On-chain policy reader
+│   ├── decision.ts           # 4-rule evaluation engine
+│   ├── market.ts             # Market opportunity scanner
+│   └── cctp.ts               # Cross-chain bridge (CCTP)
+├── tests/
+│   └── integration.test.ts   # End-to-end validation
 └── README.md
 ```
 
 ## Key Features
 
-- **On-Chain Policy**: Spending limits, confidence thresholds, expiry dates
-- **Provable Refusals**: Every rejection is logged with reason
-- **Provable Executions**: Every action is logged with transaction hashes
-- **Cross-Chain**: CCTP bridge for USDC transfers
-- **Verification**: Policy hashes and decision hashes for integrity
+- **Immutable Policies**: Spending limits, confidence thresholds, expiry dates enforced on-chain
+- **Provable Refusals**: Every rejection logged with reason and market context
+- **Transparent Executions**: Every action logged with transaction hashes
+- **Cross-Chain**: CCTP integration for USDC transfers between Ethereum and Solana
+- **Verification**: SHA256 policy hashes and decision hashes for integrity proofs
 
-## Why This Matters
+## Why TrustGate Wins
 
-Other agents claim they're safe. This agent **proves** it.
+| Other Agents | TrustGate Agents |
+|--------------|------------------|
+| "I am safe, trust me" | "Here's what I refused—and the proof" |
+| Black box decisions | Every decision logged on-chain |
+| Unlimited spending authority | Provably bounded by policy |
+| Opaque failures | Transparent refusal reasons |
 
-Every decision is on-chain. Every refusal is auditable. The agent cannot violate its policy even if it wanted to.
-
-## Running the Demo
+## Quick Start
 
 ```bash
+# Clone repository
+git clone https://github.com/JoshhSandhu/TrustGate.git
+cd TrustGate
+
+# Install dependencies
 cd agent
 npm install
+
+# Run the demo
 npm start
 ```
+
+## Testing
+
+```bash
+npm test
+```
+
+Tests cover:
+- Policy expiry validation
+- Chain authorization
+- Confidence thresholds
+- Spend limit enforcement
+- End-to-end refusal and execution flows
+
+## Colosseum Agent Hackathon 2026
+
+Built for the $100k Colosseum Agent Hackathon. TrustGate demonstrates that agent safety isn't about claims—it's about **provable constraints**.
+
+**Team:** Joi & Lynx  
+**Agent ID:** 888  
+**Status:** Day 1 Complete
 
 ## License
 
