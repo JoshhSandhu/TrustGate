@@ -6,6 +6,18 @@ export interface CctpBridgeResult {
 }
 
 /**
+ * Generate realistic Ethereum tx hash (shortened for display)
+ */
+function generateEthTxHash(): string {
+  const hex = '0123456789abcdef';
+  let hash = '';
+  for (let i = 0; i < 64; i++) {
+    hash += hex.charAt(Math.floor(Math.random() * 16));
+  }
+  return '0x' + hash.slice(0, 8) + '...' + hash.slice(-6);
+}
+
+/**
  * Bridge USDC via CCTP (Circle Cross-Chain Transfer Protocol)
  * 
  * For demo purposes, this simulates the bridge
@@ -16,29 +28,20 @@ export async function cctpBridge(
   sourceChain: string,
   destChain: string
 ): Promise<CctpBridgeResult> {
-  console.log('Initiating CCTP bridge...');
-  console.log('Amount:', amount, 'USDC');
-  console.log('Source:', sourceChain);
-  console.log('Destination:', destChain);
+  console.log('    Bridging', amount, 'USDC from', sourceChain, '→', destChain);
   
   // Simulate bridge delay
-  console.log('Step 1: Approving USDC spend...');
-  await delay(500);
+  await delay(600);
   
-  console.log('Step 2: Burning USDC on source chain...');
-  const burnTx = `0x${generateTxHash()}`;
-  console.log('Burn tx:', burnTx);
-  await delay(1000);
+  const burnTx = generateEthTxHash();
+  console.log('    ✓ Burn tx:', burnTx);
   
-  console.log('Step 3: Waiting for Circle attestation...');
-  await delay(1500);
+  await delay(800);
   
-  console.log('Step 4: Minting USDC on destination chain...');
-  const mintTx = `0x${generateTxHash()}`;
-  console.log('Mint tx:', mintTx);
-  await delay(500);
+  const mintTx = generateEthTxHash();
+  console.log('    ✓ Mint tx:', mintTx);
   
-  console.log('Bridge complete!');
+  await delay(400);
   
   return {
     burnTx,
@@ -52,17 +55,12 @@ export async function cctpBridge(
 export async function mockPlaceBet(
   market: any
 ): Promise<string> {
-  console.log('Placing bet on:', market.title);
-  await delay(800);
-  const betTx = `0x${generateTxHash()}`;
-  console.log('Bet placed! Tx:', betTx);
+  await delay(600);
+  const betTx = generateEthTxHash();
+  console.log('    ✓ Bet tx:', betTx);
   return betTx;
 }
 
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function generateTxHash(): string {
-  return Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
 }
