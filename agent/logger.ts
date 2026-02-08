@@ -2,7 +2,8 @@ import { Connection, PublicKey, SystemProgram } from '@solana/web3.js';
 import * as anchor from '@coral-xyz/anchor';
 
 // Program ID (would be deployed program in production)
-const PROGRAM_ID = new PublicKey('PolicyAgent1111111111111111111111111111111');
+// Using a valid placeholder PublicKey for testing
+const PROGRAM_ID = new PublicKey('11111111111111111111111111111111');
 
 export interface ExecutionLogData {
   policyPda: PublicKey;

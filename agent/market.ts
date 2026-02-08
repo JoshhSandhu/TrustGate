@@ -1,6 +1,12 @@
-import { MarketOpportunity } from './decision';
-
 // HARDCODED FOR DEMO - Two scenarios
+
+export interface MarketOpportunity {
+  marketId: string;
+  title: string;
+  confidence: number;
+  requiredUsdc: number;
+  chain: string;
+}
 
 /**
  * Market A: ETH to $5k

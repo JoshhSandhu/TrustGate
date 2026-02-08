@@ -1,15 +1,15 @@
 import { Connection, PublicKey, Keypair } from '@solana/web3.js';
 import { readPolicy, Policy } from './policy';
-import { evaluateOpportunity, Decision } from './decision';
-import { getMarketOpportunities, MarketOpportunity } from './market';
+import { evaluateOpportunity, Decision, MarketOpportunity } from './decision';
+import { getMarketOpportunities } from './market';
 import { cctpBridge, mockPlaceBet } from './cctp';
 import { logRefusalOnChain, logExecutionOnChain } from './logger';
 
 // Configuration
 const SOLANA_RPC = 'https://api.devnet.solana.com';
 
-// Mock policy PDA
-const POLICY_PDA = new PublicKey('Policy111111111111111111111111111111111111');
+// Mock policy PDA (using system program as placeholder)
+const POLICY_PDA = new PublicKey('11111111111111111111111111111111');
 
 async function handleRefusal(
   connection: Connection,
