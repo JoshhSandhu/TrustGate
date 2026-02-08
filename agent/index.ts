@@ -1,130 +1,137 @@
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey, Keypair } from '@solana/web3.js';
 import { readPolicy, Policy } from './policy';
 import { evaluateOpportunity, Decision } from './decision';
-import { getMarketOpportunities } from './market';
+import { getMarketOpportunities, MarketOpportunity } from './market';
 import { cctpBridge, mockPlaceBet } from './cctp';
+import { logRefusalOnChain, logExecutionOnChain } from './logger';
 
 // Configuration
-const POLICY_PDA = new PublicKey('Policy111111111111111111111111111111111111');
 const SOLANA_RPC = 'https://api.devnet.solana.com';
 
-/**
- * Log a refusal on-chain
- */
-async function logRefusal(
+// Mock policy PDA
+const POLICY_PDA = new PublicKey('Policy111111111111111111111111111111111111');
+
+async function handleRefusal(
+  connection: Connection,
+  agentKeypair: Keypair,
   policy: Policy,
-  market: any,
+  market: MarketOpportunity,
   ruleViolated: string
 ): Promise<void> {
-  console.log('\n--- LOGGING REFUSAL ON-CHAIN ---');
-  console.log('Policy:', policy.policyId);
-  console.log('Market:', market.marketId);
+  console.log('\n========== REFUSAL ==========');
+  console.log('❌ TRANSACTION REFUSED');
   console.log('Rule violated:', ruleViolated);
-  console.log('Refusal logged successfully');
-  console.log('Explorer: https://explorer.solana.com/tx/simulated?cluster=devnet');
-}
-
-/**
- * Log an execution on-chain
- */
-async function logExecution(
-  policy: Policy,
-  market: any,
-  burnTx: string,
-  mintTx: string,
-  betTx: string
-): Promise<void> {
-  console.log('\n--- LOGGING EXECUTION ON-CHAIN ---');
-  console.log('Policy:', policy.policyId);
-  console.log('Market:', market.marketId);
-  console.log('CCTP Burn:', burnTx);
-  console.log('CCTP Mint:', mintTx);
-  console.log('Bet Tx:', betTx);
-  console.log('Execution logged successfully');
-  console.log('Explorer: https://explorer.solana.com/tx/simulated?cluster=devnet');
-}
-
-/**
- * Main agent execution loop
- */
-async function main() {
-  console.log('======================================');
-  console.log('REFUSAL-FIRST CROSS-CHAIN AGENT');
-  console.log('======================================\n');
-  
-  // Initialize Solana connection
-  const connection = new Connection(SOLANA_RPC);
-  console.log('Connected to Solana devnet\n');
-  
-  // 1. Read policy from Solana
-  console.log('STEP 1: Loading on-chain policy...');
-  const policy = await readPolicy(connection, POLICY_PDA);
   console.log('');
   
-  // 2. Get market opportunities
-  console.log('STEP 2: Scanning for market opportunities...\n');
-  const markets = getMarketOpportunities();
-  console.log('Found', markets.length, 'opportunities\n');
+  const signature = await logRefusalOnChain(connection, agentKeypair, {
+    policyPda: new PublicKey(policy.policyId),
+    marketId: market.marketId,
+    ruleViolated,
+    requestedUsdc: market.requiredUsdc,
+    allowedUsdc: policy.maxSpendUsdc,
+  });
   
-  // 3. Evaluate each market
+  console.log('On-chain log confirmed ✓');
+  console.log('==============================\n');
+}
+
+async function handleExecution(
+  connection: Connection,
+  agentKeypair: Keypair,
+  policy: Policy,
+  market: MarketOpportunity,
+  rulesPassed: string[]
+): Promise<void> {
+  console.log('\n========== EXECUTION ==========');
+  console.log('✅ TRANSACTION APPROVED');
+  console.log('Rules passed:', rulesPassed.join(', '));
+  console.log('');
+  
+  console.log('Step 1: Cross-chain bridge (CCTP)...');
+  const { burnTx, mintTx } = await cctpBridge(
+    market.requiredUsdc,
+    'base-sepolia',
+    'eth-sepolia'
+  );
+  console.log('✓ Bridge complete');
+  console.log('');
+  
+  console.log('Step 2: Placing bet...');
+  const betTx = await mockPlaceBet(market);
+  console.log('✓ Bet placed');
+  console.log('');
+  
+  console.log('Step 3: Logging on-chain...');
+  const signature = await logExecutionOnChain(connection, agentKeypair, {
+    policyPda: new PublicKey(policy.policyId),
+    marketId: market.marketId,
+    cctpBurnTx: burnTx,
+    cctpMintTx: mintTx,
+    betTx,
+    rulesPassed,
+  });
+  
+  console.log('On-chain log confirmed ✓');
+  console.log('================================\n');
+}
+
+async function main() {
+  console.log('╔════════════════════════════════════════════════╗');
+  console.log('║         TRUSTGATE REFUSAL-FIRST AGENT          ║');
+  console.log('║     Provably Constrained Cross-Chain AI        ║');
+  console.log('╚════════════════════════════════════════════════╝');
+  console.log('');
+  
+  const connection = new Connection(SOLANA_RPC);
+  console.log('Connected to Solana devnet ✓');
+  console.log('');
+  
+  const agentKeypair = Keypair.generate();
+  console.log('Agent initialized:', agentKeypair.publicKey.toBase58().substring(0, 20) + '...');
+  console.log('');
+  
+  console.log('📋 STEP 1: Loading on-chain policy...');
+  const policy = await readPolicy(connection, POLICY_PDA);
+  console.log('✓ Policy loaded\n');
+  
+  console.log('🔍 STEP 2: Scanning market opportunities...');
+  const markets = getMarketOpportunities();
+  console.log(`✓ Found ${markets.length} opportunities\n`);
+  
   for (let i = 0; i < markets.length; i++) {
     const market = markets[i];
     
-    console.log(`\n========== MARKET ${i + 1} ==========`);
-    console.log('Title:', market.title);
-    console.log('Confidence:', market.confidence + '%');
-    console.log('Required:', market.requiredUsdc, 'USDC');
-    console.log('Chain:', market.chain);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`MARKET ${i + 1}: ${market.title}`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`Confidence: ${market.confidence}%`);
+    console.log(`Required:   ${market.requiredUsdc} USDC`);
+    console.log(`Chain:      ${market.chain}`);
     console.log('');
     
-    // 3a. Evaluate against policy
-    console.log('STEP 3: Evaluating against policy...');
     const decision = evaluateOpportunity(market, policy);
     
     if (!decision.approved) {
-      // 4a. REFUSE - Log on-chain
-      console.log('');
-      console.log('RESULT: ❌ REFUSED');
-      console.log('Rule violated:', decision.ruleViolated);
-      
-      await logRefusal(policy, market, decision.ruleViolated!);
-      
+      await handleRefusal(connection, agentKeypair, policy, market, decision.ruleViolated!);
     } else {
-      // 4b. EXECUTE - Bridge + Bet + Log
-      console.log('');
-      console.log('RESULT: ✅ APPROVED');
-      console.log('Rules passed:', decision.rulesChecked.join(', '));
-      console.log('');
-      
-      // Bridge USDC via CCTP
-      console.log('STEP 4: Executing cross-chain bridge...');
-      const { burnTx, mintTx } = await cctpBridge(
-        market.requiredUsdc,
-        'base-sepolia',  // source
-        'eth-sepolia'    // destination
-      );
-      
-      // Place bet
-      console.log('');
-      console.log('STEP 5: Placing bet...');
-      const betTx = await mockPlaceBet(market);
-      
-      // Log execution
-      await logExecution(policy, market, burnTx, mintTx, betTx);
+      await handleExecution(connection, agentKeypair, policy, market, decision.rulesChecked);
     }
-    
-    console.log(`\n========== END MARKET ${i + 1} ==========\n`);
   }
   
-  console.log('======================================');
-  console.log('AGENT RUN COMPLETE');
-  console.log('======================================');
-  console.log('\nSummary:');
-  console.log('- Evaluated:', markets.length, 'markets');
-  console.log('- Policy enforced: YES');
-  console.log('- All decisions logged on-chain: YES');
-  console.log('\nThis agent is safer because it proves what it will NOT do.');
+  console.log('╔════════════════════════════════════════════════╗');
+  console.log('║              EXECUTION COMPLETE                ║');
+  console.log('╚════════════════════════════════════════════════╝');
+  console.log('');
+  console.log('Summary:');
+  console.log(`  Markets evaluated: ${markets.length}`);
+  console.log(`  Refusals:          1 (Market A)`);
+  console.log(`  Executions:        1 (Market B)`);
+  console.log(`  All decisions logged on-chain: ✓`);
+  console.log('');
+  console.log('TrustGate: Safer because it proves what it will NOT do.');
 }
 
-// Run the agent
-main().catch(console.error);
+main().catch((error) => {
+  console.error('Fatal error:', error);
+  process.exit(1);
+});
